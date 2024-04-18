@@ -1,0 +1,102 @@
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+imports:
+- { resource: packages/config/encryption.yaml }
+
+parameters:
+    locale: 'en'
+    session_data.lifetime.system_lock: '%env(APP_SYSTEM_LOCK_SESSION_LIFETIME)%'
+    session_data.lifetime.user_login: '%env(APP_USER_LOGIN_SESSION_LIFETIME)%'
+    security.restricted_ips: '%env(APP_IPS_ACCESS_RESTRICTION)%'
+    system.from_email: 'no-reply@personal-management-system.localhost'
+
+    project.name: "Personal Management System"
+
+# Resolving deprecation for moving from 4.4x to 5.x
+sensio_framework_extra:
+    router:
+        annotations: false
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        public: false       # Allows optimizing the container by removing unused services; this also means
+                            # fetching services directly from the container via $container->get() won't work.
+                            # The best practice is to be explicit about your dependencies anyway.
+    app.twig_extension:
+        class: Twig_Extensions_Extension_Date
+        public: false
+        tags:
+        - { name: twig.extension }
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/*'
+        exclude: '../src/{Entity,Migrations,Tests}'
+
+    # controllers are imported separately to make sure services can be injected
+    # as action arguments even if you don't extend any base controller class
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+
+    App\Services\Core\Logger:
+        arguments:
+            $securityLogger: "@monolog.logger.security"
+        public: true
+
+    services_core_logger:
+        alias: App\Services\Core\Logger
+        public: true
+
+    App\Services\Core\Translator:
+        calls:
+            - [setTranslator, ['@translator']]
+
+    App\Services\ConfigLoaders\ConfigLoaderSession:
+        public: true
+        arguments:
+          $systemLockLifetime: '%session_data.lifetime.system_lock%'
+          $userLoginLifetime: '%session_data.lifetime.user_login%'
+
+    App\Services\ConfigLoaders\ConfigLoaderSecurity:
+        calls:
+            - setRestrictedIps: ['%security.restricted_ips%']
+
+    App\Services\ConfigLoaders\ConfigLoaderSystem:
+        calls:
+            - setSystemFromEmail: ['%system.from_email%']
+
+    notifier_proxy_logger_bridge:
+        alias: App\NotifierProxyLoggerBridge
+
+    App\NotifierProxyLoggerBridge:
+        public: true
+        arguments:
+            $logFilePath: '%kernel.logs_dir%/notifier-proxy-logger-bridge.log'
+            $loggerName: 'NotifierProxyLogger'
+            $baseUrl: 'http://127.0.0.1:8010/'
+
+    App\PmsIo\PmsIoBridge:
+        public: true
+        arguments:
+            $logFilePath: '%kernel.logs_dir%/pms-io-bridge.log'
+            $loggerName: 'PmsIoLogger'
+            $baseUrl: 'http://127.0.0.1:8001/'
+            $login: 'login'
+            $password: 'password'
+            $secret: 'add-secret-here'
+
+    App\Services\External\NotifierProxyLoggerService:
+        arguments:
+            $notifierProxyLoggerBridge: '@notifier_proxy_logger_bridge'
+
+    App\Controller\Page\SettingsLockModuleController:
+        calls:
+            - initializeSettingsModuleLockDtos: []
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
