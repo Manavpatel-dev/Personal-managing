@@ -9,11 +9,9 @@
 <hr>
 
 <ul>
-<li><b>Documentation</b> - available <a href="https://volmarg.github.io"><b>here</b></a></li>
+<li><b>Documentation</b> - Contact to  <a href="(https://www.linkedin.com/in/manav-patel-9237231a3/)"><b>here</b></a></li>
 <li><b>Demo</b> - click <a href="http://personal-management-system.pl/"><b>here </b></a>
 <ul>
-<li><b>Login:</b> admin</li>
-<li><b>Password/LockPassword:</b> admin</li>
 </ul>
 </li>
 </ul>
